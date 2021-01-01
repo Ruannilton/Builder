@@ -1,0 +1,31 @@
+[project]
+name = "c_teste"
+version = "0.1.0"
+authors = ["Ruannilton"]
+proj_type = "application"
+desc = "testing a c project"
+
+[[platform]]
+name="all"
+arch=["x86","x64"]
+[platform.dependencies]
+glfw = "3.12"
+cglm = "1.0"
+
+[[platform]]
+name="windows"
+arch=["x86","x64"]
+[platform.dependencies]
+directx = "1.0"
+
+[[platform]]
+name="linux"
+arch=["x86","x64"]
+[platform.dependencies]
+vulkan = "1.0"
+
+[[platform]]
+name="osx"
+arch=["x86","x64"]
+[platform.dependencies]
+metal = "1.0"

@@ -1,0 +1,6 @@
+lib_name:
+    lib_version:
+        deps:
+        header:
+        source:
+        bin:
