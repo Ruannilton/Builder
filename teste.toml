@@ -20,9 +20,15 @@ directx = "1.0"
 
 [[platform]]
 name="linux"
-arch=["x86","x64"]
+arch=["x86"]
 [platform.dependencies]
 vulkan = "1.0"
+
+[[platform]]
+name="linux"
+arch=["x64"]
+[platform.dependencies]
+vulkan = "1.2"
 
 [[platform]]
 name="osx"
