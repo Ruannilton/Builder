@@ -1,7 +1,7 @@
 use crate::models::{BuilderOp, Platform, Project, ProjectInfo};
 use crate::utils;
+use std::fs;
 use std::io::Write;
-use std::{fs, path::PathBuf};
 
 fn read_line() -> Option<String> {
     let mut buffer = String::new();
@@ -109,4 +109,4 @@ pub fn cmd_create_project(op: &BuilderOp, name: String, conf: bool) {
     }
 }
 
-pub fn cmd_open_project(op: &BuilderOp, name: String) {}
+// pub fn cmd_open_project(op: &BuilderOp, name: String) {}
