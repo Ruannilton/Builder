@@ -1,0 +1,25 @@
+name: Builder
+version: "1.2"
+author: Ruan Azevedo
+about: Command line tool for building and managing dependencies on C projects
+args:
+  - version:
+      short: v
+      long: version
+      help: Show the program version
+      takes_value: false
+subcommands:
+  - new:
+      about: Creates a new project
+      args:
+        - name:
+            required: true
+            help: The project´s name
+            takes_value: true
+        - conf:
+            long: conf
+            short: c
+            required: false
+            help: Define if project metadata should use default configurations
+            takes_value: false
+
