@@ -39,7 +39,8 @@ pub struct Project {
 
 impl Project {
     pub fn save(&self) {
-        let mut op = utils::get_project_path(&self.project.name);
+        let mut op =
+            utils::get_project_path(&self.project.name, Some(self.project.version.clone()));
         let content = toml::to_string_pretty(self).expect("Failed to parse Project");
         if op.is_dir() {
             op.push("conf.toml");
@@ -48,8 +49,8 @@ impl Project {
             println!("Project folder doesn´t exist");
         }
     }
-    pub fn load(name: String) -> Option<Project> {
-        let mut op = utils::get_project_path(&name);
+    pub fn load(name: String, version: Option<String>) -> Option<Project> {
+        let mut op = utils::get_project_path(&name, version);
         if op.is_dir() {
             op.push("conf.toml");
             let content = fs::read_to_string(op).expect("failed to load project config");

@@ -62,3 +62,64 @@ proj_name
   Para plataforma windows: glfw,cglm,directx<br>
   Caso haja conflito entre versões das bibliotecas, a última especificada será levada em conta
   
+# Commands
+
+  ## new
+  **Desciption:** Creates a new peoject
+
+  **Paramters:**
+  - *name*: The name of the project
+  - *c*, *conf*: Define if project metadata should use default configurations 
+
+  ## open
+  **Description:** Open a project in the text editor
+
+  **Paramters:**
+  - *name*: The project name
+  - *v*, *version*: The project version, if not especified the last version will be open
+
+  ## build
+  **Description:** Builds the project
+
+  **Paramters:**
+  - *name*: The project name
+  - *p*, *platform*: Platform version
+  - *a*, *arch*: Archtecture
+
+  ## show
+  **Description:** Show the details of an project
+
+  **Paramters:**
+  - *name*: The project name
+  - *l*, *level*: Complete detailing
+  - *v*, *version*: The project version, if not especified all versions will be shaw
+
+  ## rm 
+  **Description:** Delete a project
+
+  **Paramters:**
+  - *name*: The name of the project 
+  - *r*, *recursive*: Remove its dependencies too
+  - *v*, *version*: The project version, if not especified all versions will be removed
+  - *f*, *force*: Force deletion
+
+  ## nv
+  **Description:** Creates a new version of an project
+
+  **Paramters:**
+  - *name*: The name of the project
+  - *f*, *from*: Version from update
+  - *t*, *to*: Label of new version
+
+  ## list
+  **Description:** Show all projects
+
+  ## update
+  **Description:** Install a new version of an project
+
+  **Paramters:**
+  - *name*: The name of the project 
+  
+
+
+

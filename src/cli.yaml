@@ -8,6 +8,11 @@ args:
       long: version
       help: Show the program version
       takes_value: false
+  - list:
+      short: l
+      long: list
+      help: Show all projects
+      takes_value: false
 subcommands:
   - new:
       about: Creates a new project
@@ -22,4 +27,92 @@ subcommands:
             required: false
             help: Define if project metadata should use default configurations
             takes_value: false
+  - open:
+      about: Open a project in the text editor
+      args:
+        - name:
+            required: true
+            help: The project´s name
+            takes_value: true
+        - version:
+            long: version
+            short: v
+            required: false
+            help: The project version, if not especified the last version will be open
+            takes_value: true
+  - show:
+      about: Show the details of an project
+      args:
+        - name:
+            required: true
+            help: The project´s name
+            takes_value: true
+        - level:
+            long: level
+            short: l
+            required: false
+            help: Level of detail
+            takes_value: true
+        - version:
+            long: version
+            short: v
+            required: false
+            help: The project version, if not especified all versions will be shaw
+            takes_value: true
+  - rm:
+      about: Delete a project
+      args:
+        - name:
+            required: true
+            help: The project´s name
+            takes_value: true
+        - recursive:
+            long: recursive
+            short: r
+            required: false
+            help: Remove it's dependencies too
+            takes_value: false
+        - version:
+            long: version
+            short: v
+            required: false
+            help: The project version, if not especified all versions will be shaw
+            takes_value: true
+        - force:
+            long: force
+            short: f
+            required: false
+            help: Force deletion
+            takes_value: false
+  - nv:
+      about: Creates a new version of an project
+      args:
+        - name:
+            required: true
+            help: The project´s name
+            takes_value: true
+        - from:
+            long: from
+            short: f
+            required: false
+            help: Version from update
+            takes_value: true
+        - to:
+            long: to
+            short: t
+            required: false
+            help: Label of new version
+            takes_value: true
+  - update:
+      about: Install a new version of an project
+      args:
+        - name:
+            required: true
+            help: The project´s name
+            takes_value: true
+
+
+
+
+
 
