@@ -2,6 +2,7 @@ mod commands;
 mod models;
 mod utils;
 
+use crate::models::*;
 use clap::ArgMatches;
 use clap::{load_yaml, App};
 use models::BuilderOp;
@@ -28,24 +29,28 @@ fn main() {
 fn new(matches: &ArgMatches, config: &BuilderOp) {
     if let Some(matches) = matches.subcommand_matches("new") {
         if matches.is_present("name") {
-            if matches.is_present("conf") {
-                commands::cmd_create_project(
-                    config,
-                    matches.value_of("name").unwrap().to_owned(),
-                    true,
-                );
-            } else {
-                commands::cmd_create_project(
-                    config,
-                    matches.value_of("name").unwrap().to_owned(),
-                    false,
-                );
-            }
+            let args = NewArgs {
+                name: matches.value_of("name").unwrap(),
+                conf: matches.is_present("conf"),
+            };
+
+            commands::cmd_create_project(config, args);
         }
     }
 }
 
-fn open(matches: &ArgMatches, config: &BuilderOp) {}
+fn open(matches: &ArgMatches, config: &BuilderOp) {
+    if let Some(matches) = matches.subcommand_matches("open") {
+        if matches.is_present("name") {
+            let args = OpenArgs {
+                name: matches.value_of("name").unwrap(),
+                version: matches.value_of("version"),
+            };
+
+            commands::cmd_open_project(config, args);
+        }
+    }
+}
 
 fn build(matches: &ArgMatches, config: &BuilderOp) {}
 
