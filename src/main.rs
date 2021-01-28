@@ -52,7 +52,47 @@ fn open(matches: &ArgMatches, config: &BuilderOp) {
     }
 }
 
-fn build(matches: &ArgMatches, config: &BuilderOp) {}
+fn build(matches: &ArgMatches, config: &BuilderOp) {
+    let mut args = BuildArgs {
+        name: None,
+        platform: None,
+        archtecture: None,
+        version: None,
+        release: false,
+    };
+
+    if let Some(matches) = matches.subcommand_matches("build") {
+        args.name = matches.value_of("name");
+        args.platform = match matches.value_of("platform") {
+            Some(values) => {
+                let spl = values.split(';');
+                let mut res = Vec::new();
+                for i in spl {
+                    res.push(i);
+                }
+                Some(res)
+            }
+            None => None,
+        };
+        args.archtecture = match matches.value_of("archtecture") {
+            Some(values) => {
+                let spl = values.split(';');
+                let mut res = Vec::new();
+                for i in spl {
+                    res.push(i);
+                }
+                Some(res)
+            }
+            None => None,
+        };
+        args.version = matches.value_of("version");
+        if matches.is_present("release") {
+            args.release = true
+        }
+
+        commands::cmd_build_project(config, args);
+    }
+}
 
 fn show(matches: &ArgMatches, config: &BuilderOp) {}
 

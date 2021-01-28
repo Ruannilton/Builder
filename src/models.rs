@@ -14,6 +14,7 @@ pub struct BuilderOp {
     pub projects_dir: String,
     pub project_type: String,
     pub arch: Vec<String>,
+    pub plats: Vec<String>,
     pub author: Option<Vec<String>>,
     pub create_git: bool,
     pub configure_on_create: bool,
@@ -26,6 +27,12 @@ pub struct ProjectInfo {
     pub authors: Option<Vec<String>>,
     pub proj_type: String,
     pub desc: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Dependencie {
+    pub name: String,
+    pub version: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -45,6 +52,7 @@ pub struct Project {
 pub struct ProjectLog {
     pub name: String,
     pub last_opened: String,
+    pub last_version: String,
     pub last_time: NaiveTime,
 }
 
@@ -59,9 +67,11 @@ pub struct OpenArgs<'a> {
 }
 
 pub struct BuildArgs<'a> {
-    pub name: &'a str,
-    pub platform: Option<&'a str>,
-    pub archtecture: Option<&'a str>,
+    pub name: Option<&'a str>,
+    pub platform: Option<Vec<&'a str>>,
+    pub archtecture: Option<Vec<&'a str>>,
+    pub version: Option<&'a str>,
+    pub release: bool,
 }
 
 pub struct ShowArgs<'a> {

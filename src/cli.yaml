@@ -88,6 +88,7 @@ subcommands:
       about: Creates a new version of an project
       args:
         - name:
+            long: name
             required: true
             help: The project´s name
             takes_value: true
@@ -110,8 +111,39 @@ subcommands:
             required: true
             help: The project´s name
             takes_value: true
-
-
+  - build:
+      about: Build a project
+      args:
+        - name:
+            long: name
+            short: n
+            required: false
+            help: The project to build, if no especified the project on current path will be select, if there are no project the command will abort
+            takes_value: true
+        - platform:
+            long: platform
+            short: p
+            required: false
+            takes_value: true
+            help: The platform target to build, if no especified the default platform will be used
+        - archtecture:
+            long: archtecture
+            short: a
+            required: false
+            takes_value: true
+            help: The archtecture target to build, if no especified the default archtecture will be used
+        - version: 
+            long: version
+            short: v
+            required: false
+            takes_value: true
+            help: The project version to compile, if no especified the last version will be used
+        - release:
+            long: release
+            short: r
+            required: false
+            takes_value: false
+            help: Build the project in release mode
 
 
 

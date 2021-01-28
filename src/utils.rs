@@ -1,7 +1,10 @@
-use crate::models::BuilderOp;
+use crate::models::{BuilderOp, Dependencie, Platform, Project};
+use crate::ProjectLog;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::Command;
 use std::string::ToString;
 
 pub fn get_builder_path() -> PathBuf {
@@ -29,9 +32,50 @@ pub fn get_project_path(name: &String, version: Option<String>) -> PathBuf {
             v = v.replace(".", "_");
             proj_dir.push(v);
         }
-        None => {}
+        None => {
+            let mut p_dir = proj_dir.to_owned();
+            let log = {
+                if p_dir.is_dir() {
+                    p_dir.push("log.json");
+                    let content = fs::read_to_string(p_dir).expect("failed to load project config");
+                    let proj: ProjectLog =
+                        serde_json::from_str(&content).expect("failed to parse project config");
+                    Some(proj)
+                } else {
+                    println!("Project folder doesn´t exist");
+                    None
+                }
+            };
+
+            let mut v = log.expect("failed to get project log").last_version;
+            v.insert(0, 'v');
+            v = v.replace(".", "_");
+            proj_dir.push(v);
+        }
     };
     proj_dir
+}
+
+pub fn get_project_conf(name: &String, version: Option<String>) -> String {
+    let mut proj_conf = get_project_path(name, version);
+    proj_conf.push("conf.toml");
+    std::fs::read_to_string(proj_conf).expect("Failed to read project conf")
+}
+
+pub fn init_git(path: PathBuf) {
+    let program = which::which("git").unwrap();
+    match Command::new(program.to_owned())
+        .current_dir(path)
+        .arg("init")
+        .output()
+    {
+        Ok(_) => {
+            println!("Git repository created");
+        }
+        Err(e) => {
+            println!("Failed to create git repository\n{}", e);
+        }
+    }
 }
 
 pub fn read_line() -> Option<String> {
@@ -117,4 +161,84 @@ pub fn promp_vec(
         };
         inp
     }
+}
+
+pub fn parse_project_conf(
+    project: String,
+    version: Option<String>,
+) -> HashMap<String, HashMap<String, Vec<Dependencie>>> {
+    let conf = get_project_conf(&project, version);
+    let proj: Project = toml::from_str(conf.as_ref()).expect("Failed to parse project config file");
+    let mut parsed = HashMap::<String, HashMap<String, Vec<Dependencie>>>::new();
+
+    let cloj = |plat: &Platform| -> HashMap<String, Vec<Dependencie>> {
+        let mut hm = HashMap::<String, Vec<Dependencie>>::new();
+        //ITERATE ON ARCHS
+        for arch in plat.arch.iter() {
+            if hm.contains_key(arch) {
+                if let Some(deps) = hm.get_mut(arch) {
+                    if let Some(dependencies) = plat.dependencies.as_ref() {
+                        //ITERATE ON DEPS
+                        for (dep, ver) in dependencies.iter() {
+                            deps.push(Dependencie {
+                                name: dep.clone(),
+                                version: ver.clone(),
+                            });
+                        }
+                    }
+                }
+            } else {
+                let mut tmp_vec: Vec<Dependencie> = Vec::new();
+
+                if let Some(dependencies) = plat.dependencies.as_ref() {
+                    //ITERATE ON DEPS
+                    for (dep, ver) in dependencies.iter() {
+                        tmp_vec.push(Dependencie {
+                            name: dep.clone(),
+                            version: ver.clone(),
+                        });
+                    }
+                }
+                hm.insert(arch.clone(), tmp_vec);
+            }
+        }
+        hm
+    };
+
+    //ITERATE ON PLATAFORMS
+    for plat in proj.platform.iter() {
+        parsed
+            .entry(plat.name.clone())
+            .and_modify(|hm| {
+                //ITERATE ON ARCHS
+                for arch in plat.arch.iter() {
+                    if hm.contains_key(arch) {
+                        if let Some(deps) = hm.get_mut(arch) {
+                            let dependencies = plat.dependencies.as_ref().unwrap();
+                            //ITERATE ON DEPS
+                            for (dep, ver) in dependencies.iter() {
+                                deps.push(Dependencie {
+                                    name: dep.clone(),
+                                    version: ver.clone(),
+                                });
+                            }
+                        }
+                    } else {
+                        let mut tmp_vec: Vec<Dependencie> = Vec::new();
+                        let dependencies = plat.dependencies.as_ref().unwrap();
+                        //ITERATE ON DEPS
+                        for (dep, ver) in dependencies.iter() {
+                            tmp_vec.push(Dependencie {
+                                name: dep.clone(),
+                                version: ver.clone(),
+                            });
+                        }
+                        hm.insert(arch.clone(), tmp_vec);
+                    }
+                }
+            })
+            .or_insert(cloj(plat));
+    }
+
+    parsed
 }

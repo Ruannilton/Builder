@@ -18,7 +18,7 @@ proj_name
   - proj_name.h
   - internal
 - source
-- bin
+- build
 - assets
   
 **Builder Env:**
