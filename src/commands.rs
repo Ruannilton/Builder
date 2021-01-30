@@ -1,6 +1,7 @@
 use crate::models::*;
 use crate::utils;
 use chrono::Utc;
+use regex::Regex;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -149,18 +150,104 @@ fn cmd_compile_project(
     path: &PathBuf,
     release: bool,
     deps: &Vec<Dependencie>,
+    info: &ProjectInfo,
 ) {
+    let sources = utils::find_files(path.to_owned(), "/*.c");
+    let mut output = path.to_owned();
+    output.push("build");
+
     println!("");
     if release {
         println!("Mode: Debug");
+        output.push("release");
     } else {
         println!("Mode: Debug");
+        output.push("debug");
     }
     println!("Building project for [{}][{}]\n", platform, arch);
 
+    println!("Looking for dependencies:");
     for dep in deps.iter() {
         println!("Adding dependencie: {} {}", dep.name, dep.version);
     }
+
+    println!("\nLooking for sources:");
+    for s in sources.iter() {
+        println!("Adding source: {}", s);
+    }
+
+    let gcc = which::which("gcc").expect("GCC not found");
+
+    //Compile objects
+    {
+        let _status = Command::new(gcc.to_owned())
+            .current_dir(path)
+            .arg("-c")
+            .arg("-fpic")
+            .arg("-Iheader")
+            .args(sources.clone())
+            .status()
+            .expect("Failed to compile");
+
+        for file in fs::read_dir(path).unwrap() {
+            if let Ok(f) = file {
+                let pf = f.path();
+                let path_file: &str = pf.to_str().unwrap();
+
+                if !pf.is_dir() {
+                    if path_file.ends_with(".o") {
+                        let tmp: Vec<&str> = path_file.split('\\').collect();
+                        let file_name: &str = tmp.last().unwrap();
+                        let mut file_to = output.to_owned();
+                        file_to.push(file_name);
+                        fs::rename(path_file, file_to).expect("Failed to copy file");
+                    }
+                }
+            }
+        }
+    }
+
+    match info.proj_type.as_str() {
+        "app" => {
+            output.push(info.name.clone());
+            let out = output.to_str().unwrap();
+            let _res = Command::new(gcc.to_owned())
+                .current_dir(path)
+                .arg("-Iheader")
+                .arg("-o")
+                .arg(out)
+                .args(sources)
+                .status()
+                .expect("Failed to compile");
+        }
+        "lib" => {
+            let mut name = info.name.clone();
+            let out_dir = output.to_owned();
+            match platform.as_str() {
+                "windows" => {
+                    name.push_str(".lib");
+                    output.push(name)
+                }
+                _ => {
+                    name.push_str(".so");
+                    output.push(name)
+                }
+            };
+            let objects = utils::find_files(out_dir.to_owned(), "/*.o");
+            let out = output.to_str().unwrap();
+            let _res = Command::new(gcc.to_owned())
+                .current_dir(out_dir)
+                .arg("-shared")
+                .arg("-Iheader")
+                .arg("-o")
+                .arg(out)
+                .args(objects)
+                .status()
+                .expect("Failed to compile");
+        }
+        _ => {}
+    };
+
     println!("");
 }
 
@@ -177,6 +264,7 @@ pub fn cmd_build_project(op: &BuilderOp, args: BuildArgs) {
         }
     };
     let proj_path = utils::get_project_path(&n, v.clone());
+    let proj_info = utils::get_project_conf(&n, v.clone());
     let conf_tree = utils::parse_project_conf(n, v.clone());
     let mut build_path = proj_path.to_owned();
     build_path.push("build");
@@ -238,7 +326,14 @@ pub fn cmd_build_project(op: &BuilderOp, args: BuildArgs) {
                     }
                     deps_vec.extend(deps.clone());
 
-                    cmd_compile_project(&plat_a, arch_a, &path, args.release, &deps_vec);
+                    cmd_compile_project(
+                        &plat_a,
+                        arch_a,
+                        &proj_path,
+                        args.release,
+                        &deps_vec,
+                        &proj_info.project,
+                    );
                 }
             }
         }

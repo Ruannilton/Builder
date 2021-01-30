@@ -13,12 +13,13 @@ A tool for package managing and building in C projects
 **Project Structure:**<br>
 proj_name
 - proj.toml
-- deps
 - header
   - proj_name.h
   - internal
 - source
 - build
+  - release
+  - debug
 - assets
   
 **Builder Env:**

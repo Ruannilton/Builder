@@ -1,6 +1,10 @@
 use crate::models::{BuilderOp, Dependencie, Platform, Project};
 use crate::ProjectLog;
+use regex::Regex;
 use std::collections::HashMap;
+use std::collections::LinkedList;
+use std::collections::VecDeque;
+use std::convert::From;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -56,10 +60,11 @@ pub fn get_project_path(name: &String, version: Option<String>) -> PathBuf {
     proj_dir
 }
 
-pub fn get_project_conf(name: &String, version: Option<String>) -> String {
+pub fn get_project_conf(name: &String, version: Option<String>) -> Project {
     let mut proj_conf = get_project_path(name, version);
     proj_conf.push("conf.toml");
-    std::fs::read_to_string(proj_conf).expect("Failed to read project conf")
+    let str_conf = std::fs::read_to_string(proj_conf).expect("Failed to read project conf");
+    toml::from_str(str_conf.as_ref()).expect("Failed to parse project config file")
 }
 
 pub fn init_git(path: PathBuf) {
@@ -167,8 +172,7 @@ pub fn parse_project_conf(
     project: String,
     version: Option<String>,
 ) -> HashMap<String, HashMap<String, Vec<Dependencie>>> {
-    let conf = get_project_conf(&project, version);
-    let proj: Project = toml::from_str(conf.as_ref()).expect("Failed to parse project config file");
+    let proj = get_project_conf(&project, version);
     let mut parsed = HashMap::<String, HashMap<String, Vec<Dependencie>>>::new();
 
     let cloj = |plat: &Platform| -> HashMap<String, Vec<Dependencie>> {
@@ -241,4 +245,34 @@ pub fn parse_project_conf(
     }
 
     parsed
+}
+
+pub fn find_files(start_path: PathBuf, regex: &str) -> Vec<String> {
+    let mut dir_queue = VecDeque::<PathBuf>::new();
+    let mut found = LinkedList::<String>::new();
+    let reg = Regex::new(regex).expect(format!("failed to compile regex: {}", regex).as_str());
+    dir_queue.push_back(start_path.to_owned());
+
+    while dir_queue.len() > 0 {
+        let dir = dir_queue.pop_front().unwrap();
+        for f in fs::read_dir(&dir)
+            .expect(format!("failed to read directory {:?}", dir.to_owned()).as_str())
+        {
+            if let Ok(file) = f {
+                let path: PathBuf = file.path();
+
+                if path.is_dir() {
+                    dir_queue.push_back(path);
+                } else {
+                    let short = path.strip_prefix(start_path.to_owned()).unwrap();
+                    let short_str = short.to_str().unwrap();
+                    if reg.is_match(short_str) {
+                        found.push_back(short_str.to_owned());
+                    }
+                }
+            }
+        }
+    }
+
+    found.iter().map(|x| x.clone()).collect()
 }
