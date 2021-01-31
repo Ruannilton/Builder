@@ -144,6 +144,73 @@ pub fn cmd_open_project(op: &BuilderOp, args: OpenArgs) {
     };
 }
 
+fn generate_objects(gcc: &PathBuf, path: &PathBuf, output: &PathBuf) -> Vec<String> {
+    let sources = utils::find_files(path.to_owned(), "/*.c");
+    let mut obj_dirs = Vec::new();
+
+    let _status = Command::new(gcc.to_owned())
+        .current_dir(path)
+        .arg("-c")
+        .arg("-fpic")
+        .arg("-Iheader")
+        .args(sources.clone())
+        .status()
+        .expect("Failed to compile");
+
+    for file in fs::read_dir(path).unwrap() {
+        if let Ok(f) = file {
+            let pf = f.path();
+            let path_file: &str = pf.to_str().unwrap();
+
+            if !pf.is_dir() {
+                if path_file.ends_with(".o") {
+                    let tmp: Vec<&str> = path_file.split('\\').collect();
+                    let file_name: &str = tmp.last().unwrap();
+                    let mut file_to = output.to_owned();
+                    file_to.push(file_name);
+                    obj_dirs.push(file_to.to_owned());
+                    fs::rename(path_file, file_to).expect("Failed to copy file");
+                }
+            }
+        }
+    }
+    obj_dirs
+        .iter()
+        .map(|x| x.to_str().unwrap().to_owned())
+        .collect()
+}
+
+fn generate_executable(gcc: &PathBuf, path: &PathBuf, output: &PathBuf, exe_name: String) {
+    let mut out = output.to_owned();
+    out.push(exe_name);
+    let sources = generate_objects(gcc, path, output);
+    println!("Generating executable");
+    let _res = Command::new(gcc.to_owned())
+        .current_dir(path)
+        .arg("-Iheader")
+        .arg("-o")
+        .arg(out.to_str().unwrap())
+        .args(sources)
+        .status()
+        .expect("Failed to compile");
+}
+
+fn generate_library(gcc: &PathBuf, path: &PathBuf, output: &PathBuf, lib_name: String) {
+    let mut out = output.to_owned();
+    out.push(lib_name);
+    let sources = generate_objects(gcc, path, output);
+    println!("Generating lib");
+    let _res = Command::new(gcc.to_owned())
+        .current_dir(path)
+        .arg("-shared")
+        .arg("-Iheader")
+        .arg("-o")
+        .arg(out)
+        .args(sources)
+        .status()
+        .expect("Failed to compile");
+}
+
 fn cmd_compile_project(
     platform: &String,
     arch: &String,
@@ -153,18 +220,13 @@ fn cmd_compile_project(
     info: &ProjectInfo,
 ) {
     let sources = utils::find_files(path.to_owned(), "/*.c");
+    let mode = if release { "release" } else { "debug" };
+    let gcc = which::which("gcc").expect("GCC not found");
     let mut output = path.to_owned();
     output.push("build");
+    output.push(mode);
 
-    println!("");
-    if release {
-        println!("Mode: Debug");
-        output.push("release");
-    } else {
-        println!("Mode: Debug");
-        output.push("debug");
-    }
-    println!("Building project for [{}][{}]\n", platform, arch);
+    println!("Building project for [{}][{}][{}]\n", platform, arch, mode);
 
     println!("Looking for dependencies:");
     for dep in deps.iter() {
@@ -175,75 +237,21 @@ fn cmd_compile_project(
     for s in sources.iter() {
         println!("Adding source: {}", s);
     }
-
-    let gcc = which::which("gcc").expect("GCC not found");
-
-    //Compile objects
-    {
-        let _status = Command::new(gcc.to_owned())
-            .current_dir(path)
-            .arg("-c")
-            .arg("-fpic")
-            .arg("-Iheader")
-            .args(sources.clone())
-            .status()
-            .expect("Failed to compile");
-
-        for file in fs::read_dir(path).unwrap() {
-            if let Ok(f) = file {
-                let pf = f.path();
-                let path_file: &str = pf.to_str().unwrap();
-
-                if !pf.is_dir() {
-                    if path_file.ends_with(".o") {
-                        let tmp: Vec<&str> = path_file.split('\\').collect();
-                        let file_name: &str = tmp.last().unwrap();
-                        let mut file_to = output.to_owned();
-                        file_to.push(file_name);
-                        fs::rename(path_file, file_to).expect("Failed to copy file");
-                    }
-                }
-            }
-        }
-    }
-
     match info.proj_type.as_str() {
         "app" => {
-            output.push(info.name.clone());
-            let out = output.to_str().unwrap();
-            let _res = Command::new(gcc.to_owned())
-                .current_dir(path)
-                .arg("-Iheader")
-                .arg("-o")
-                .arg(out)
-                .args(sources)
-                .status()
-                .expect("Failed to compile");
+            generate_executable(&gcc, path, &output, info.name.clone());
         }
         "lib" => {
             let mut name = info.name.clone();
-            let out_dir = output.to_owned();
             match platform.as_str() {
                 "windows" => {
-                    name.push_str(".lib");
-                    output.push(name)
+                    name.push_str(".dll");
                 }
                 _ => {
                     name.push_str(".so");
-                    output.push(name)
                 }
             };
-            let objects = utils::find_files(out_dir.to_owned(), "/*.o");
-            let out = output.to_str().unwrap();
-            let _res = Command::new(gcc.to_owned())
-                .current_dir(out_dir)
-                .arg("-shared")
-                .arg("-Iheader")
-                .arg("-o")
-                .arg(out)
-                .args(objects)
-                .status()
-                .expect("Failed to compile");
+            generate_library(&gcc, path, &output, name.clone());
         }
         _ => {}
     };
