@@ -8,11 +8,6 @@ args:
       long: version
       help: Show the program version
       takes_value: false
-  - list:
-      short: l
-      long: list
-      help: Show all projects
-      takes_value: false
 subcommands:
   - new:
       about: Creates a new project
@@ -144,7 +139,27 @@ subcommands:
             required: false
             takes_value: false
             help: Build the project in release mode
-
+        - verbose:
+            long: verbose
+            required: false
+            takes_value: false
+            help: Log the build process
+  - list:
+      short: l
+      long: list
+      help: Show projects and libraries
+      takes_value: true
+      args:
+        - show_version:
+            long: versions
+            short: v
+            help: Show project versions
+            required: false
+        - show_dependencies:
+            long: dependendices
+            short: d
+            help: Show project dependenciesa
+            required: false
 
 
 

@@ -1,13 +1,15 @@
-use crate::models::*;
+pub mod args;
+
+use crate::models::data::*;
 use crate::utils;
+use args::*;
 use chrono::Utc;
-use regex::Regex;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
 pub fn cmd_create_project(op: &BuilderOp, args: NewArgs) {
-    let mut proj_dir = utils::get_project_path(&args.name.to_owned(), None);
+    let mut proj_dir = Project::get_path_from(&args.name.to_owned(), None);
     if proj_dir.is_dir() {
         println!("Project folder already exists");
         println!("If you pretends create a new version of this project check the nv command");
@@ -16,42 +18,35 @@ pub fn cmd_create_project(op: &BuilderOp, args: NewArgs) {
             Ok(_) => {
                 let mut proj_ver = proj_dir.to_owned();
                 proj_ver.push("v1_0");
+
                 match fs::create_dir(&proj_ver) {
                     Ok(_) => {
-                        let proj_info: ProjectInfo;
+                        let name: String = args.name.to_owned().clone();
+                        let version: String = "1.0".to_owned();
+                        let mut authors: Option<Vec<String>> = op.author.clone();
+                        let mut proj_type: String = op.project_type.clone();
+                        let desc: Option<String>;
                         let proj_plat: Platform;
+
                         if op.configure_on_create && args.conf == false {
-                            let desc = utils::promp("Project Description: ", false, Some(""));
-                            proj_info = ProjectInfo {
-                                name: args.name.to_owned().clone(),
-                                version: "1.0".to_owned(),
-                                authors: op.author.clone(),
-                                proj_type: op.project_type.clone(),
-                                desc: desc,
-                            };
+                            desc = utils::promp("Project Description: ", false, Some(""));
+
                             proj_plat = Platform {
                                 name: "all".to_owned(),
                                 arch: op.arch.clone(),
                                 dependencies: None,
                             }
                         } else {
-                            let ptype = utils::promp(
+                            proj_type = utils::promp(
                                 "Project Type [\"app\" or \"lib\"]: ",
                                 false,
                                 Some("app"),
                             )
                             .unwrap();
-                            let desc = utils::promp("Project Description: ", false, Some(""));
+                            desc = utils::promp("Project Description: ", false, Some(""));
 
-                            let authors =
+                            authors =
                                 utils::promp_vec("Project authors: ", false, ';', Some(vec![""]));
-                            proj_info = ProjectInfo {
-                                name: args.name.to_owned().clone(),
-                                version: "1.0".to_owned(),
-                                authors: authors,
-                                proj_type: ptype,
-                                desc: desc,
-                            };
                             let plat = utils::promp(
                                 "Project Platform [ex: \"windos or linux or macos\"]: ",
                                 false,
@@ -72,14 +67,18 @@ pub fn cmd_create_project(op: &BuilderOp, args: NewArgs) {
                             }
                         }
                         let proj = Project {
-                            project: proj_info,
+                            name: name,
+                            version: version,
+                            authors: authors,
+                            proj_type: proj_type,
+                            desc: desc,
                             platform: vec![proj_plat],
                         };
                         proj.save();
                         let log = ProjectLog {
-                            name: proj.project.name,
-                            last_opened: proj.project.version.clone(),
-                            last_version: proj.project.version.clone(),
+                            name: proj.name,
+                            last_opened: proj.version.clone(),
+                            last_version: proj.version.clone(),
                             last_time: Utc::now().time(),
                         };
                         log.save();
@@ -115,7 +114,7 @@ pub fn cmd_open_project(op: &BuilderOp, args: OpenArgs) {
         Some(r) => Some(r.to_owned()),
         None => Some(log.last_opened),
     };
-    let path = utils::get_project_path(&args.name.to_owned(), v.clone());
+    let path = Project::get_path_from(&args.name.to_owned(), v.clone());
 
     match &op.editor_cmd {
         Some(val) => {
@@ -217,8 +216,15 @@ fn cmd_compile_project(
     path: &PathBuf,
     release: bool,
     deps: &Vec<Dependencie>,
-    info: &ProjectInfo,
+    info: &Project,
+    verbose: bool,
 ) {
+    let log = |txt: String| {
+        if verbose {
+            println!("{}", txt);
+        }
+    };
+
     let sources = utils::find_files(path.to_owned(), "/*.c");
     let mode = if release { "release" } else { "debug" };
     let gcc = which::which("gcc").expect("GCC not found");
@@ -226,17 +232,21 @@ fn cmd_compile_project(
     output.push("build");
     output.push(mode);
 
-    println!("Building project for [{}][{}][{}]\n", platform, arch, mode);
+    log(format!(
+        "Building project for [{}][{}][{}]\n",
+        platform, arch, mode
+    ));
 
-    println!("Looking for dependencies:");
+    log("Looking for dependencies:".to_owned());
     for dep in deps.iter() {
-        println!("Adding dependencie: {} {}", dep.name, dep.version);
+        log(format!("Adding dependencie: {} {}", dep.name, dep.version));
     }
 
-    println!("\nLooking for sources:");
+    log("\nLooking for sources:".to_owned());
     for s in sources.iter() {
-        println!("Adding source: {}", s);
+        log(format!("Adding source: {}", s));
     }
+
     match info.proj_type.as_str() {
         "app" => {
             generate_executable(&gcc, path, &output, info.name.clone());
@@ -271,31 +281,26 @@ pub fn cmd_build_project(op: &BuilderOp, args: BuildArgs) {
             std::process::exit(0);
         }
     };
-    let proj_path = utils::get_project_path(&n, v.clone());
-    let proj_info = utils::get_project_conf(&n, v.clone());
-    let conf_tree = utils::parse_project_conf(n, v.clone());
+    let proj_path = Project::get_path_from(&n, v.clone());
+    let proj = Project::load(&n, v.clone()).unwrap();
+    let conf_tree = Project::parse_conf_from(&n, v.clone());
     let mut build_path = proj_path.to_owned();
     build_path.push("build");
     if !build_path.is_dir() {
         fs::create_dir(&build_path).expect("failed to create build directory");
     }
 
-    let path: PathBuf;
-    {
-        if args.release {
-            let mut release_path = build_path.to_owned();
-            release_path.push("release");
-            if !release_path.is_dir() {
-                fs::create_dir(&release_path).expect("failed to create debug directory");
-            }
-            path = release_path;
-        } else {
-            let mut debug_path = build_path.to_owned();
-            debug_path.push("debug");
-            if !debug_path.is_dir() {
-                fs::create_dir(&debug_path).expect("failed to create debug directory");
-            }
-            path = debug_path;
+    if args.release {
+        let mut release_path = build_path.to_owned();
+        release_path.push("release");
+        if !release_path.is_dir() {
+            fs::create_dir(&release_path).expect("failed to create debug directory");
+        }
+    } else {
+        let mut debug_path = build_path.to_owned();
+        debug_path.push("debug");
+        if !debug_path.is_dir() {
+            fs::create_dir(&debug_path).expect("failed to create debug directory");
         }
     }
 
@@ -340,7 +345,8 @@ pub fn cmd_build_project(op: &BuilderOp, args: BuildArgs) {
                         &proj_path,
                         args.release,
                         &deps_vec,
-                        &proj_info.project,
+                        &proj,
+                        args.verbose,
                     );
                 }
             }
@@ -348,4 +354,17 @@ pub fn cmd_build_project(op: &BuilderOp, args: BuildArgs) {
     }
 }
 
-pub fn cmd_build_lib(op: &BuilderOp, args: BuildArgs) {}
+// pub fn cmd_build_lib(op: &BuilderOp, args: BuildArgs) {}
+
+pub fn cmd_list(_op: &BuilderOp, _args: ListArgs) {
+    let builder_path = utils::get_builder_path();
+    let _list_lib = || {
+        let mut lib_path = builder_path.to_path_buf();
+        lib_path.push("libs");
+    };
+    let _list_proj = || {
+        let mut proj_path = builder_path.to_path_buf();
+        let cfg = utils::load_builder_config();
+        proj_path.push(cfg.projects_dir.clone());
+    };
+}

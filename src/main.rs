@@ -2,10 +2,10 @@ mod commands;
 mod models;
 mod utils;
 
-use crate::models::*;
 use clap::ArgMatches;
 use clap::{load_yaml, App};
-use models::BuilderOp;
+use commands::args::*;
+use models::data::*;
 
 fn main() {
     let version = "1.0";
@@ -26,6 +26,7 @@ fn main() {
     list(&matches, &config);
 }
 
+/// Creates a new project
 fn new(matches: &ArgMatches, config: &BuilderOp) {
     if let Some(matches) = matches.subcommand_matches("new") {
         if matches.is_present("name") {
@@ -39,6 +40,7 @@ fn new(matches: &ArgMatches, config: &BuilderOp) {
     }
 }
 
+/// Open a project
 fn open(matches: &ArgMatches, config: &BuilderOp) {
     if let Some(matches) = matches.subcommand_matches("open") {
         if matches.is_present("name") {
@@ -52,6 +54,7 @@ fn open(matches: &ArgMatches, config: &BuilderOp) {
     }
 }
 
+/// Build a project
 fn build(matches: &ArgMatches, config: &BuilderOp) {
     let mut args = BuildArgs {
         name: None,
@@ -59,6 +62,7 @@ fn build(matches: &ArgMatches, config: &BuilderOp) {
         archtecture: None,
         version: None,
         release: false,
+        verbose: false,
     };
 
     if let Some(matches) = matches.subcommand_matches("build") {
@@ -89,15 +93,49 @@ fn build(matches: &ArgMatches, config: &BuilderOp) {
         if matches.is_present("release") {
             args.release = true
         }
+        if matches.is_present("verbose") {
+            args.verbose = true
+        }
 
         commands::cmd_build_project(config, args);
     }
 }
 
-fn show(matches: &ArgMatches, config: &BuilderOp) {}
+fn list(matches: &ArgMatches, config: &BuilderOp) {
+    let mut args = ListArgs {
+        ptype: "all",
+        show_versions: false,
+        show_deps: false,
+    };
 
-fn rm(matches: &ArgMatches, config: &BuilderOp) {}
+    if let Some(mat) = matches.subcommand_matches("list") {
+        if let Some(val) = mat.value_of("version") {
+            let tmpstrval = val.to_ascii_lowercase();
+            let strval = tmpstrval.as_str();
+            match strval {
+                "project" => {
+                    args.ptype = "project";
+                }
+                "lib" => {
+                    args.ptype = "lib";
+                }
+                _ => {
+                    args.ptype = "all";
+                }
+            }
+        }
+        if mat.is_present("show_version") {
+            args.show_versions = true
+        }
+        if mat.is_present("show_dependencies") {
+            args.show_versions = true
+        }
+    }
+    commands::cmd_list(config, args);
+}
 
-fn nv(matches: &ArgMatches, config: &BuilderOp) {}
+fn show(_matches: &ArgMatches, _config: &BuilderOp) {}
 
-fn list(matches: &ArgMatches, config: &BuilderOp) {}
+fn rm(_matches: &ArgMatches, _config: &BuilderOp) {}
+
+fn nv(_matches: &ArgMatches, _config: &BuilderOp) {}
