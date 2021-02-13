@@ -147,7 +147,7 @@ subcommands:
   - list:
       short: l
       long: list
-      help: Show projects and libraries
+      about: Show projects and libraries
       takes_value: true
       args:
         - show_version:
@@ -160,6 +160,12 @@ subcommands:
             short: d
             help: Show project dependenciesa
             required: false
+        - type:
+            long: type
+            short: t
+            help: Filter Library(lib) or Project(project) or both(all)
+            required: false
+            takes_value: true
 
 
 

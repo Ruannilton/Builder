@@ -15,7 +15,7 @@ pub fn get_builder_path() -> PathBuf {
     builder_dir
 }
 
-pub fn load_builder_config() -> BuilderOp {
+pub fn load_builder() -> BuilderOp {
     let mut conf_path = get_builder_path();
     conf_path.push("config.json");
     let conf_content = fs::read_to_string(conf_path).expect("Failed to read config file");

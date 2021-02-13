@@ -7,9 +7,15 @@ use clap::{load_yaml, App};
 use commands::args::*;
 use models::data::*;
 
+#[macro_use]
+use lazy_static::lazy_static;
+lazy_static! {
+    static ref BUILDER_DATA: BuilderOp = utils::load_builder();
+}
+
 fn main() {
     let version = "1.0";
-    let config = utils::load_builder_config();
+    let config = utils::load_builder();
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from(yaml).get_matches();
 
@@ -17,17 +23,17 @@ fn main() {
         println!("{}", version);
     }
 
-    new(&matches, &config);
-    open(&matches, &config);
-    build(&matches, &config);
-    show(&matches, &config);
-    rm(&matches, &config);
-    nv(&matches, &config);
-    list(&matches, &config);
+    new(&matches);
+    open(&matches);
+    build(&matches);
+    show(&matches);
+    rm(&matches);
+    nv(&matches);
+    list(&matches);
 }
 
 /// Creates a new project
-fn new(matches: &ArgMatches, config: &BuilderOp) {
+fn new(matches: &ArgMatches) {
     if let Some(matches) = matches.subcommand_matches("new") {
         if matches.is_present("name") {
             let args = NewArgs {
@@ -35,13 +41,13 @@ fn new(matches: &ArgMatches, config: &BuilderOp) {
                 conf: matches.is_present("conf"),
             };
 
-            commands::cmd_create_project(config, args);
+            commands::cmd_create_project(args);
         }
     }
 }
 
 /// Open a project
-fn open(matches: &ArgMatches, config: &BuilderOp) {
+fn open(matches: &ArgMatches) {
     if let Some(matches) = matches.subcommand_matches("open") {
         if matches.is_present("name") {
             let args = OpenArgs {
@@ -49,13 +55,13 @@ fn open(matches: &ArgMatches, config: &BuilderOp) {
                 version: matches.value_of("version"),
             };
 
-            commands::cmd_open_project(config, args);
+            commands::cmd_open_project(args);
         }
     }
 }
 
 /// Build a project
-fn build(matches: &ArgMatches, config: &BuilderOp) {
+fn build(matches: &ArgMatches) {
     let mut args = BuildArgs {
         name: None,
         platform: None,
@@ -97,11 +103,11 @@ fn build(matches: &ArgMatches, config: &BuilderOp) {
             args.verbose = true
         }
 
-        commands::cmd_build_project(config, args);
+        //commands::cmd_build_project(args);
     }
 }
 
-fn list(matches: &ArgMatches, config: &BuilderOp) {
+fn list(matches: &ArgMatches) {
     let mut args = ListArgs {
         ptype: "all",
         show_versions: false,
@@ -109,7 +115,7 @@ fn list(matches: &ArgMatches, config: &BuilderOp) {
     };
 
     if let Some(mat) = matches.subcommand_matches("list") {
-        if let Some(val) = mat.value_of("version") {
+        if let Some(val) = mat.value_of("type") {
             let tmpstrval = val.to_ascii_lowercase();
             let strval = tmpstrval.as_str();
             match strval {
@@ -123,6 +129,8 @@ fn list(matches: &ArgMatches, config: &BuilderOp) {
                     args.ptype = "all";
                 }
             }
+        } else {
+            args.ptype = "all";
         }
         if mat.is_present("show_version") {
             args.show_versions = true
@@ -131,11 +139,11 @@ fn list(matches: &ArgMatches, config: &BuilderOp) {
             args.show_versions = true
         }
     }
-    commands::cmd_list(config, args);
+    commands::cmd_list(args);
 }
 
-fn show(_matches: &ArgMatches, _config: &BuilderOp) {}
+fn show(_matches: &ArgMatches) {}
 
-fn rm(_matches: &ArgMatches, _config: &BuilderOp) {}
+fn rm(_matches: &ArgMatches) {}
 
-fn nv(_matches: &ArgMatches, _config: &BuilderOp) {}
+fn nv(_matches: &ArgMatches) {}

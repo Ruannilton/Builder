@@ -1,0 +1,201 @@
+{
+  "rootTopicKey": "1ed1743e-7e0f-4d4a-b4f8-ff16362290eb",
+  "editorRootTopicKey": "1ed1743e-7e0f-4d4a-b4f8-ff16362290eb",
+  "focusKey": "622e12b8-e78b-456c-a23e-358e985f5d64",
+  "extData": {
+    "TOPIC_REFERENCE": {
+      "reference": {}
+    }
+  },
+  "topics": [
+    {
+      "key": "1ed1743e-7e0f-4d4a-b4f8-ff16362290eb",
+      "parentKey": null,
+      "subKeys": [
+        "0681e7a9-af53-47c3-a720-d5a5daa5a9ef",
+        "7115bd89-7191-43f8-b5e9-cd8e89e1528e"
+      ],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Builder"
+        }
+      ]
+    },
+    {
+      "key": "622e12b8-e78b-456c-a23e-358e985f5d64",
+      "parentKey": "0681e7a9-af53-47c3-a720-d5a5daa5a9ef",
+      "subKeys": [],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Log File"
+        }
+      ]
+    },
+    {
+      "key": "e842470d-265a-437e-9d08-00c408ecc84c",
+      "parentKey": "2a04389b-b00e-4349-ba1d-b86852b16df6",
+      "subKeys": [],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Build"
+        }
+      ]
+    },
+    {
+      "key": "2a04389b-b00e-4349-ba1d-b86852b16df6",
+      "parentKey": "0681e7a9-af53-47c3-a720-d5a5daa5a9ef",
+      "subKeys": [
+        "0be165ab-8916-4d2d-a848-6989f8b26f67",
+        "e842470d-265a-437e-9d08-00c408ecc84c",
+        "263f74d8-7c91-41d4-b609-0b2608b8479a",
+        "9097a206-f579-46cd-a63b-a21021ef397d",
+        "932845e6-aee9-4a50-ba10-8d96230b7bd4"
+      ],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Proj Version"
+        }
+      ]
+    },
+    {
+      "key": "263f74d8-7c91-41d4-b609-0b2608b8479a",
+      "parentKey": "2a04389b-b00e-4349-ba1d-b86852b16df6",
+      "subKeys": [],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Header"
+        }
+      ]
+    },
+    {
+      "key": "0681e7a9-af53-47c3-a720-d5a5daa5a9ef",
+      "parentKey": "1ed1743e-7e0f-4d4a-b4f8-ff16362290eb",
+      "subKeys": [
+        "2a04389b-b00e-4349-ba1d-b86852b16df6",
+        "622e12b8-e78b-456c-a23e-358e985f5d64"
+      ],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Projects"
+        }
+      ]
+    },
+    {
+      "key": "0be165ab-8916-4d2d-a848-6989f8b26f67",
+      "parentKey": "2a04389b-b00e-4349-ba1d-b86852b16df6",
+      "subKeys": [],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Assets"
+        }
+      ]
+    },
+    {
+      "key": "932845e6-aee9-4a50-ba10-8d96230b7bd4",
+      "parentKey": "2a04389b-b00e-4349-ba1d-b86852b16df6",
+      "subKeys": [],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Conf File"
+        }
+      ]
+    },
+    {
+      "key": "9097a206-f579-46cd-a63b-a21021ef397d",
+      "parentKey": "2a04389b-b00e-4349-ba1d-b86852b16df6",
+      "subKeys": [],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Source"
+        }
+      ]
+    },
+    {
+      "key": "7115bd89-7191-43f8-b5e9-cd8e89e1528e",
+      "parentKey": "1ed1743e-7e0f-4d4a-b4f8-ff16362290eb",
+      "subKeys": [],
+      "collapse": false,
+      "style": null,
+      "blocks": [
+        {
+          "type": "CONTENT",
+          "data": "Libraries"
+        }
+      ]
+    }
+  ],
+  "config": {
+    "readOnly": false,
+    "allowUndo": true,
+    "layoutDir": 0,
+    "theme": {
+      "name": "default",
+      "randomColor": true,
+      "background": "rgb(57,60,65)",
+      "highlightColor": "#50C9CE",
+      "marginH": 60,
+      "marginV": 20,
+      "contentStyle": {
+        "lineHeight": "1.5",
+        "fontSize": "16px"
+      },
+      "linkStyle": {
+        "lineRadius": 5,
+        "lineType": "curve",
+        "lineWidth": "3px"
+      },
+      "rootTopic": {
+        "contentStyle": {
+          "fontSize": "36px"
+        },
+        "subLinkStyle": {
+          "lineType": "curve",
+          "lineWidth": "3px"
+        }
+      },
+      "primaryTopic": {
+        "contentStyle": {
+          "fontSize": "24px"
+        },
+        "subLinkStyle": {
+          "lineType": "curve",
+          "lineWidth": "3px"
+        }
+      },
+      "normalTopic": {
+        "subLinkStyle": {
+          "lineType": "curve",
+          "lineWidth": "3px"
+        }
+      }
+    }
+  },
+  "formatVersion": null
+}
