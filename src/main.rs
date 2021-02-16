@@ -138,8 +138,8 @@ fn list(matches: &ArgMatches) {
         if mat.is_present("show_dependencies") {
             args.show_versions = true
         }
+        commands::cmd_list(args);
     }
-    commands::cmd_list(args);
 }
 
 fn show(_matches: &ArgMatches) {}

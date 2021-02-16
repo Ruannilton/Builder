@@ -74,10 +74,13 @@ impl ProjectLog {
         }
     }
     pub fn load(name: String) -> Option<ProjectLog> {
-        let mut op = Project::load(&name, None).unwrap().get_path();
+        let mut op = match Project::load(&name, None).unwrap().get_path().parent(){
+            Some(val)=>PathBuf::from(val),
+            None=>{ println!("Could not resolve log path"); return None;}
+        };
         if op.is_dir() {
             op.push("log.json");
-            let content = fs::read_to_string(op).expect("failed to load project config");
+            let content = fs::read_to_string(op.to_owned()).expect(format!("failed to load project config at {:?}",op).as_str());
             let proj: ProjectLog =
                 serde_json::from_str(&content).expect("failed to parse project config");
             Some(proj)
@@ -454,6 +457,7 @@ impl Library {
         proj_dir
     }
 }
+
 impl fmt::Display for Project {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let res = toml::to_string_pretty(self);

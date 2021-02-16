@@ -100,7 +100,13 @@ pub fn cmd_create_project(args: NewArgs) {
 }
 
 pub fn cmd_open_project(args: OpenArgs) {
-    let mut log = ProjectLog::load(args.name.to_owned()).unwrap();
+    let mut log = match ProjectLog::load(args.name.to_owned()){
+        Some(val)=> val,
+        None =>{
+            println!("Could not find project log");
+            return;
+        }
+    };
     let v = match args.version {
         Some(r) => Some(r.to_owned()),
         None => Some(log.last_opened),
@@ -113,7 +119,14 @@ pub fn cmd_open_project(args: OpenArgs) {
             let op = &crate::BUILDER_DATA;
             match &op.editor_cmd {
                 Some(val) => {
-                    let program = which::which(val.clone()).unwrap();
+                    let program = match which::which(val.clone()){
+                        Ok(val)=>val,
+                        Err(e)=>{
+                            println!("{:?}",e);
+                            println!("Could not find editor configured");
+                            return;
+                        }
+                    };
                     match Command::new(program).arg(path).output() {
                         Ok(_) => {
                             match v {
