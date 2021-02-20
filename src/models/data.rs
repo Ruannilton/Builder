@@ -34,14 +34,14 @@ pub struct Dependencie {
     pub version: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize,Clone)]
 pub struct Platform {
     pub name: String,
     pub arch: Vec<String>,
     pub dependencies: Option<HashMap<String, String>>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize,Clone)]
 pub struct Project {
     pub name: String,
     pub version: String,
@@ -105,49 +105,54 @@ impl Project {
     }
 
     //Parse project configuration to hash map
-    pub fn parse_conf(&self) -> HashMap<String, HashMap<String, Vec<Dependencie>>> {
-        let mut parsed = HashMap::<String, HashMap<String, Vec<Dependencie>>>::new();
-        let cloj = |plat: &Platform| -> HashMap<String, Vec<Dependencie>> {
-            let mut hm = HashMap::<String, Vec<Dependencie>>::new();
-            //ITERATE ON ARCHS
-            for arch in plat.arch.iter() {
-                if hm.contains_key(arch) {
-                    if let Some(deps) = hm.get_mut(arch) {
-                        if let Some(dependencies) = plat.dependencies.as_ref() {
-                            //ITERATE ON DEPS
-                            for (dep, ver) in dependencies.iter() {
-                                deps.push(Dependencie {
-                                    name: dep.clone(),
-                                    version: ver.clone(),
-                                });
-                            }
-                        }
-                    }
-                } else {
-                    let mut tmp_vec: Vec<Dependencie> = Vec::new();
+    fn parse_conf_helper(plat: &Platform)-> HashMap<String, Vec<Dependencie>> {
+        let mut hm = HashMap::<String, Vec<Dependencie>>::new();
+        //ITERATE ON ARCHS
+       let archs = plat.arch.clone();
+        for arch in archs {
+            let arc= arch.clone();
+            if hm.contains_key(&arc) {
+                if let Some(deps) = hm.get_mut(&arc) {
                     if let Some(dependencies) = plat.dependencies.as_ref() {
                         //ITERATE ON DEPS
                         for (dep, ver) in dependencies.iter() {
-                            tmp_vec.push(Dependencie {
+                            deps.push(Dependencie {
                                 name: dep.clone(),
                                 version: ver.clone(),
                             });
                         }
                     }
-                    hm.insert(arch.clone(), tmp_vec);
                 }
+            } else {
+                let mut tmp_vec: Vec<Dependencie> = Vec::new();
+                if let Some(dependencies) = plat.dependencies.as_ref() {
+                    //ITERATE ON DEPS
+                    for (dep, ver) in dependencies.iter() {
+                        tmp_vec.push(Dependencie {
+                            name: dep.clone(),
+                            version: ver.clone(),
+                        });
+                    }
+                }
+                hm.insert(arc.clone(), tmp_vec.clone());
             }
-            hm
-        };
+        }
+        hm
+    }
+
+    pub fn parse_conf(&self) -> HashMap<&str, HashMap<String, Vec<Dependencie>>> {
+        let mut parsed = HashMap::<&str, HashMap<String, Vec<Dependencie>>>::new();
+        
         //ITERATE ON PLATAFORMS
         for plat in self.platform.iter() {
             parsed
-                .entry(plat.name.clone())
+                .entry(&plat.name)
                 .and_modify(|hm| {
                     //ITERATE ON ARCHS
                     for arch in plat.arch.iter() {
-                        if hm.contains_key(arch) {
-                            if let Some(deps) = hm.get_mut(arch) {
+                        let arc:&str = arch.as_ref();
+                        if hm.contains_key(arc) {
+                            if let Some(deps) = hm.get_mut(arc) {
                                 let dependencies = plat.dependencies.as_ref().unwrap();
                                 //ITERATE ON DEPS
                                 for (dep, ver) in dependencies.iter() {
@@ -171,18 +176,52 @@ impl Project {
                         }
                     }
                 })
-                .or_insert(cloj(plat));
+                .or_insert(Project::parse_conf_helper(plat));
         }
         parsed
     }
 
     //Try get the project path
     pub fn get_path(&self) -> PathBuf {
-        Project::make_path(&self.name, Some(self.version.clone()))
+        Project::make_path(&self.name, Some(self.version.as_ref()))
     }
 
     pub fn get_versions(&self) -> Vec<Version> {
         Project::version_list(&self.name)
+    }
+
+    pub fn get_dependencie(&self, platforms: Vec<&str>, archs: Vec<&str>) -> Vec<Dependencie>{
+        let dependencie_tree = self.parse_conf();
+       
+        let mut universal_deps = Vec::<Dependencie>::new();
+        if let Some(all_plat) = dependencie_tree.get("all") {
+            if let Some(all_deps) = all_plat.get("all") {
+                universal_deps = all_deps.clone();
+            }
+        }
+
+        let mut vec : Vec<Dependencie>= Vec::new();
+        for platform in platforms{
+            if let Some(plat) = dependencie_tree.get(platform){
+                let plat: &HashMap<String, Vec<Dependencie>> = plat;
+                for archtecture in archs.iter(){
+                    if let Some(arch_deps) = plat.get(archtecture.to_owned()){
+                        
+                        vec.extend(universal_deps.clone());
+                        if let Some(deps) = plat.get("all"){
+                            vec.extend(deps.clone());
+                        }
+                        if let Some(all) = dependencie_tree.get("all"){
+                            if let Some(deps) = all.get(archtecture.to_owned()){
+                                vec.extend(deps.clone())
+                            }
+                        }
+                        vec.extend(arch_deps.clone());
+                    }
+                }
+            }
+        }
+        vec
     }
 
     pub fn list() -> Vec<Project> {
@@ -205,7 +244,7 @@ impl Project {
     }
 
     //Try load a project from name
-    pub fn load(name: &String, version: Option<String>) -> Option<Project> {
+    pub fn load(name: &String, version: Option<&str>) -> Option<Project> {
         let mut op = Project::make_path(name, version);
         if op.is_dir() {
             op.push("conf.toml");
@@ -218,7 +257,7 @@ impl Project {
         }
     }
 
-    pub fn exist(name: &String, version: Option<String>) -> bool {
+    pub fn exist(name: &String, version: Option<&str>) -> bool {
         match version {
             Some(v) => {
                 let mut path = Project::make_path(name, Some(v));
@@ -233,10 +272,12 @@ impl Project {
             }
         }
     }
+
     pub fn get_project_root() -> PathBuf {
         let cfg = &crate::BUILDER_DATA;
         PathBuf::from(cfg.projects_dir.clone())
     }
+    
     pub fn version_list(name: &String) -> Vec<Version> {
         let mut proj_dir = Project::get_project_root();
         proj_dir.push(name.clone());
@@ -248,8 +289,8 @@ impl Project {
             if let Ok(folder) = f {
                 let p: PathBuf = folder.path();
                 let folder_name = p.file_name().unwrap().to_str().unwrap();
-                if folder_name.starts_with("name") {
-                    let spl: Vec<&str> = folder_name.split('_').collect();
+                let spl: Vec<&str> = folder_name.split('_').collect();
+                if spl[0] == name {
                     match Version::parse(spl[1]) {
                         Ok(v) => versions.push(v),
                         Err(_) => println!("{} has no valid version", folder_name),
@@ -260,17 +301,20 @@ impl Project {
         versions.sort_unstable_by(|a, b| a.cmp(b));
         versions
     }
-    pub fn make_path(name: &String, version: Option<String>) -> PathBuf {
+
+    pub fn make_path(name: &String, version: Option<&str>) -> PathBuf {
         let cfg = &crate::BUILDER_DATA;
         let mut proj_dir = PathBuf::from(cfg.projects_dir.clone());
         proj_dir.push(name.clone());
-        let v = match version {
-            Some(v) => v.clone(),
+        let v :String = match version {
+            Some(v) => String::from(v.clone()),
             None => {
                 let vec = Project::version_list(name);
                 let vers = vec.last();
                 match vers {
-                    Some(ver) => String::from(format!("{}.{}.{}", ver.major, ver.minor, ver.patch)),
+                    Some(ver) => {
+                        format!("{}.{}.{}", ver.major, ver.minor, ver.patch)
+                },
                     None => String::from("1.0.0"),
                 }
             }

@@ -7,7 +7,7 @@ use clap::{load_yaml, App};
 use commands::args::*;
 use models::data::*;
 
-#[macro_use]
+
 use lazy_static::lazy_static;
 lazy_static! {
     static ref BUILDER_DATA: BuilderOp = utils::load_builder();
@@ -15,7 +15,6 @@ lazy_static! {
 
 fn main() {
     let version = "1.0";
-    let config = utils::load_builder();
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from(yaml).get_matches();
 
@@ -39,6 +38,7 @@ fn new(matches: &ArgMatches) {
             let args = NewArgs {
                 name: matches.value_of("name").unwrap(),
                 conf: matches.is_present("conf"),
+                p_type: matches.value_of("type")
             };
 
             commands::cmd_create_project(args);
@@ -103,10 +103,11 @@ fn build(matches: &ArgMatches) {
             args.verbose = true
         }
 
-        //commands::cmd_build_project(args);
+        commands::cmd_build_project(args);
     }
 }
 
+/// List projects
 fn list(matches: &ArgMatches) {
     let mut args = ListArgs {
         ptype: "all",
@@ -142,8 +143,41 @@ fn list(matches: &ArgMatches) {
     }
 }
 
-fn show(_matches: &ArgMatches) {}
+/// Show Projects
+fn show(matches: &ArgMatches) {
+    let mut args = ShowArgs{
+        name: "",
+        version: None
+    };
+    if let Some(mat) = matches.subcommand_matches("show"){
+        
+        match mat.value_of("name"){
+            Some(v)=>{
+                args.version = mat.value_of("version");
+                args.name = v;
+                commands::cmd_show_project(args);
+            },
+            None=>{
+                println!("Should especify project name");
+            }
+        }
+    }
+    
 
-fn rm(_matches: &ArgMatches) {}
+}
 
-fn nv(_matches: &ArgMatches) {}
+fn rm(_matches: &ArgMatches) {
+   
+}
+
+fn nv(matches: &ArgMatches) {
+    if let Some(nv) = matches.subcommand_matches("nv"){
+        let mut args = NvArgs{
+            name: nv.value_of("name").unwrap(),
+            u_type: nv.value_of("type").unwrap(),
+            from: nv.value_of("from"),
+            to: nv.value_of("to")
+        };
+        commands::cmd_nv_project(args);
+    }
+}

@@ -1,5 +1,6 @@
 pub mod args;
 
+use fs_extra::dir::CopyOptions;
 use crate::models::data::*;
 use crate::utils;
 use args::*;
@@ -7,6 +8,8 @@ use chrono::Utc;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::io::Write;
+use fs_extra;
 
 pub fn cmd_create_project(args: NewArgs) {
     let op = &crate::BUILDER_DATA;
@@ -21,7 +24,7 @@ pub fn cmd_create_project(args: NewArgs) {
                 let name: String = args.name.to_owned().clone();
                 let version: String = "1.0.0".to_owned();
                 let mut authors: Option<Vec<String>> = op.author.clone();
-                let mut proj_type: String = op.project_type.clone();
+                let mut proj_type: String = match args.p_type{ Some(v)=>v.to_owned(),None=>op.project_type.clone()};
                 let desc: Option<String>;
                 let proj_plat: Platform;
 
@@ -59,7 +62,30 @@ pub fn cmd_create_project(args: NewArgs) {
                         dependencies: None,
                     }
                 }
+                let mut src_dir = proj_dir.to_owned();
+                let mut head_dir = proj_dir.to_owned();
+                let mut build_dir = proj_dir.to_owned();
+                let mut dependencies = proj_dir.to_owned();
+                let mut assets_dir = proj_dir.to_owned();
+                
+                src_dir.push("source");
+                head_dir.push("header");
+                build_dir.push("build");
+                dependencies.push("dependencies");
+                assets_dir.push("assets");
 
+                fs::create_dir(&src_dir).or_else(|_:std::io::Error|->Result<(),()>{println!("Failed to create source dir");Ok(())}).unwrap();
+                fs::create_dir(&head_dir).or_else(|_:std::io::Error|->Result<(),()>{println!("Failed to create header dir");Ok(())}).unwrap();
+                fs::create_dir(build_dir).or_else(|_:std::io::Error|->Result<(),()>{println!("Failed to create build dir");Ok(())}).unwrap();
+                fs::create_dir(dependencies).or_else(|_:std::io::Error|->Result<(),()>{println!("Failed to create dependencies dir");Ok(())}).unwrap();
+                fs::create_dir(assets_dir).or_else(|_:std::io::Error|->Result<(),()>{println!("Failed to create assets dir");Ok(())}).unwrap();
+
+                src_dir.push("main.c");
+                head_dir.push(format!{"{}.h",name.clone()});
+                let mut header_guard = name.clone().to_uppercase();
+                header_guard.push_str("_H");
+                fs::write(src_dir, format!{"#include \"{}.h\"\n\nint main(){{\nreturn 0;\n}}\n",name.clone(),});
+                fs::write(head_dir, format!{"#ifndef {}\n#define {}\n#include <stdio.h>\n#endif",header_guard,header_guard});
                 {
                     Project {
                         name: name.clone(),
@@ -107,9 +133,9 @@ pub fn cmd_open_project(args: OpenArgs) {
             return;
         }
     };
-    let v = match args.version {
-        Some(r) => Some(r.to_owned()),
-        None => Some(log.last_opened),
+    let v: Option<&str> = match args.version {
+        Some(r) => Some(r),
+        None => Some(log.last_opened.as_ref()),
     };
     let o_proj = Project::load(&args.name.to_owned(), v.clone());
 
@@ -131,7 +157,7 @@ pub fn cmd_open_project(args: OpenArgs) {
                         Ok(_) => {
                             match v {
                                 Some(ver) => {
-                                    log.last_opened = ver;
+                                    log.last_opened = String::from(ver);
                                     log.last_time = Utc::now().time();
                                     log.save();
                                 }
@@ -185,216 +211,272 @@ pub fn cmd_list(args: ListArgs) {
     }
 }
 
-// fn generate_objects(gcc: &PathBuf, path: &PathBuf, output: &PathBuf) -> Vec<String> {
-//     let sources = utils::find_files(path.to_owned(), "/*.c");
-//     let mut obj_dirs = Vec::new();
+pub fn cmd_build_project(args: BuildArgs) {
+    let op :&BuilderOp = &crate::BUILDER_DATA;
+    
+    match args.name{
+        Some(name)=>{
+           match Project::load(&String::from(name),args.version){
+               Some(proj)=>{
+                let proj: Project = proj;
+                let mut build_dir = proj.get_path();
+                build_dir.push("build");
 
-//     let _status = Command::new(gcc.to_owned())
-//         .current_dir(path)
-//         .arg("-c")
-//         .arg("-fpic")
-//         .arg("-Iheader")
-//         .args(sources.clone())
-//         .status()
-//         .expect("Failed to compile");
+                if args.release{
+                    build_dir.push("release");
+                }else{
+                    build_dir.push("debug");
+                }
 
-//     for file in fs::read_dir(path).unwrap() {
-//         if let Ok(f) = file {
-//             let pf = f.path();
-//             let path_file: &str = pf.to_str().unwrap();
+                fs::create_dir_all(&build_dir);
 
-//             if !pf.is_dir() {
-//                 if path_file.ends_with(".o") {
-//                     let tmp: Vec<&str> = path_file.split('\\').collect();
-//                     let file_name: &str = tmp.last().unwrap();
-//                     let mut file_to = output.to_owned();
-//                     file_to.push(file_name);
-//                     obj_dirs.push(file_to.to_owned());
-//                     fs::rename(path_file, file_to).expect("Failed to copy file");
-//                 }
-//             }
-//         }
-//     }
-//     obj_dirs
-//         .iter()
-//         .map(|x| x.to_str().unwrap().to_owned())
-//         .collect()
-// }
+                let platforms: Vec<&str> = match args.platform{
+                    Some(val) => val,
+                    None => op.plats.iter().map(|x|x.as_ref()).collect::<Vec<&str>>()
+                };
 
-// fn generate_executable(gcc: &PathBuf, path: &PathBuf, output: &PathBuf, exe_name: String) {
-//     let mut out = output.to_owned();
-//     out.push(exe_name);
-//     let sources = generate_objects(gcc, path, output);
-//     println!("Generating executable");
-//     let _res = Command::new(gcc.to_owned())
-//         .current_dir(path)
-//         .arg("-Iheader")
-//         .arg("-o")
-//         .arg(out.to_str().unwrap())
-//         .args(sources)
-//         .status()
-//         .expect("Failed to compile");
-// }
+                let archs: Vec<&str> = match args.archtecture{
+                    Some(val)=>val,
+                    None => op.arch.iter().map(|x| x.as_ref()).collect::<Vec<&str>>()
+                };
+                
+                for plat in platforms.iter(){
+                    for arch in archs.iter(){
+                        compile_project(plat,arch,&build_dir,&proj,args.verbose);
+                    }
+                }
+               },
+               None=>{}
+           }
+        },
+        None=>{}
+    };
+}
 
-// fn generate_library(gcc: &PathBuf, path: &PathBuf, output: &PathBuf, lib_name: String) {
-//     let mut out = output.to_owned();
-//     out.push(lib_name);
-//     let sources = generate_objects(gcc, path, output);
-//     println!("Generating lib");
-//     let _res = Command::new(gcc.to_owned())
-//         .current_dir(path)
-//         .arg("-shared")
-//         .arg("-Iheader")
-//         .arg("-o")
-//         .arg(out)
-//         .args(sources)
-//         .status()
-//         .expect("Failed to compile");
-// }
+pub fn cmd_show_project(arg: ShowArgs){
+ 
+    let namae = arg.name.to_owned();
+    let proj = Project::load(&namae, arg.version);
 
-// fn cmd_compile_project(
-//     platform: &String,
-//     arch: &String,
-//     path: &PathBuf,
-//     release: bool,
-//     deps: &Vec<Dependencie>,
-//     info: &Project,
-//     verbose: bool,
-// ) {
-//     let log = |txt: String| {
-//         if verbose {
-//             println!("{}", txt);
-//         }
-//     };
+    match proj{
+        Some(project)=>{
+            let project: Project = project;
+            println!("{}",format!("Type: {}",project.proj_type));
 
-//     let sources = utils::find_files(path.to_owned(), "/*.c");
-//     let mode = if release { "release" } else { "debug" };
-//     let gcc = which::which("gcc").expect("GCC not found");
-//     let mut output = path.to_owned();
-//     output.push("build");
-//     output.push(mode);
+            let mut all_v: String = String::new();
+            for version in project.get_versions(){
+                all_v.push_str(format!("{}.{}.{}",version.major,version.minor,version.patch).as_str());
+                all_v.push_str(", ");
+            }
+            let all_v = &all_v[0..all_v.len()-2];
+            if let Some(v) = arg.version{
+                println!("{}",format!("Version:\n   Current: {}\n   All: {}",v,all_v));
+            }else{
+                println!("{}",format!("Version:\n   Current: {}\n   All: {}",project.version,all_v));
+            }
+            if let Some(a) = project.authors{
+                let a: Vec<String> = a;
+                let mut st: String = String::new();
+                for name in a{
+                    st.push_str(name.as_str());
+                    st.push_str(", ");
+                }
+                let st = &st[0..st.len()-2];
+                println!("{}",format!("Authors: {}",st));
+            }
+            if let Some(d) = project.desc{
+                println!("{}",format!("Description: {}",d));
+            }
+            for plat in project.platform{
+                println!("");
+                if let Some(dep_h) = plat.dependencies{
+                   
+                    let mut st: String = String::new();
+                    for name in plat.arch{
+                        st.push_str(name.as_str());
+                        st.push_str(", ");
+                    }
+                    let st = &st[0..st.len()-2];
+                    println!("{}",format!("{} {}",plat.name,st));
+                    for dep in dep_h{
+                        println!("{}",format!("   {} {}",dep.0,dep.1)); 
+                     }
+                }
+                
+            }
+        },
+        None=>{
+            println!("Project not found!");
+        }
+    }
+}
 
-//     log(format!(
-//         "Building project for [{}][{}][{}]\n",
-//         platform, arch, mode
-//     ));
+pub fn cmd_nv_project(arg: NvArgs){
+    match Project::load(&arg.name.to_owned(), arg.from){
+        Some(proj)=>{
+            let proj: Project = proj;
+            let from = match arg.from{
+                Some(f)=>semver::Version::parse(f).unwrap(),
+                None=>semver::Version::parse(proj.version.as_str()).unwrap()
+            };
+            let mut to = from.clone();
 
-//     log("Looking for dependencies:".to_owned());
-//     for dep in deps.iter() {
-//         log(format!("Adding dependencie: {} {}", dep.name, dep.version));
-//     }
+            match arg.u_type{
+                "major"=>{
+                    match arg.to{
+                        Some(val)=>{
+                            to.major = val.parse::<u64>().unwrap();
+                        },
+                        None => {to.increment_major();}
+                    };
+                },
+                "minor"=>{
+                    match arg.to{
+                        Some(val)=>{
+                            to.minor = val.parse::<u64>().unwrap();
+                        },
+                        None => {to.increment_minor();}
+                    };
+                },
+                "patch"=>{
+                    match arg.to{
+                        Some(val)=>{
+                            to.patch = val.parse::<u64>().unwrap();
+                        },
+                        None => {to.increment_patch();}
+                    };
+                }
+                _=>{
+                    println!("Should especify if the update is major, minor or patch");
+                }
+            }
+            let to = format!("{}.{}.{}",to.major,to.minor,to.patch);
+            let new_path = Project::make_path(&arg.name.to_owned(), Some(to.as_str()));
+            
+            match fs::create_dir(&new_path){
+               Ok(_)=>{
+                let mut cp_dir = proj.get_path();
+                let mut cp_op = CopyOptions::new();
+                cp_op.content_only = true;
+                 match fs_extra::dir::copy(cp_dir, new_path, &cp_op){
+                   Ok(_)=>{
+                    let mut proj = Project::load(&arg.name.to_owned(), Some(to.as_str()));
+                    if let Some(mut p)= proj{
+                        p.version = to;
+                        p.save();
+                    }
+                   },
+                   Err(_)=>{println!("Failed to create new project content")}
+               }},
+               Err(_)=>{println!("Failed to create new project folder");}
+            };
+        },
+        None=>{
+            println!("Project not found");
+        }
+    }
+}
 
-//     log("\nLooking for sources:".to_owned());
-//     for s in sources.iter() {
-//         log(format!("Adding source: {}", s));
-//     }
+fn generate_objects(gcc: &PathBuf, path: &PathBuf, output: &PathBuf) -> Vec<String> {
+    let sources = utils::find_files(path.to_owned(), "/*.c");
+    let mut obj_dirs = Vec::new();
 
-//     match info.proj_type.as_str() {
-//         "app" => {
-//             generate_executable(&gcc, path, &output, info.name.clone());
-//         }
-//         "lib" => {
-//             let mut name = info.name.clone();
-//             match platform.as_str() {
-//                 "windows" => {
-//                     name.push_str(".dll");
-//                 }
-//                 _ => {
-//                     name.push_str(".so");
-//                 }
-//             };
-//             generate_library(&gcc, path, &output, name.clone());
-//         }
-//         _ => {}
-//     };
+    let res = Command::new(gcc.to_owned())
+        .current_dir(path)
+        .arg("-c")
+        .arg("-fpic")
+        .arg("-Iheader")
+        .args(sources.clone()).output()
+        .expect("Failed to compile");
+    
+        std::io::stdout().write_all(&res.stdout).unwrap();
+        std::io::stderr().write_all(&res.stderr).unwrap();
 
-//     println!("");
-// }
+    for file in fs::read_dir(path).unwrap() {
+        if let Ok(f) = file {
+            let pf = f.path();
+            let path_file: &str = pf.to_str().unwrap();
 
-// pub fn cmd_build_project(args: BuildArgs) {
-//     let op = &crate::BUILDER_DATA;
-//     let v = match args.version {
-//         Some(r) => Some(r.to_owned()),
-//         None => None,
-//     };
-//     let n = match args.name {
-//         Some(r) => r.to_owned(),
-//         None => {
-//             println!("No project found");
-//             std::process::exit(0);
-//         }
-//     };
+            if !pf.is_dir() {
+                if path_file.ends_with(".o") {
+                    let tmp: Vec<&str> = path_file.split('\\').collect();
+                    let file_name: &str = tmp.last().unwrap();
+                    let mut file_to = output.to_owned();
+                    file_to.push(file_name);
+                    obj_dirs.push(file_to.to_owned());
+                    fs::rename(path_file, file_to).expect("Failed to copy file");
+                }
+            }
+        }
+    }
+    obj_dirs
+        .iter()
+        .map(|x| x.to_str().unwrap().to_owned())
+        .collect()
+}
 
-//     let proj = Project::load(&n, v.clone()).unwrap();
-//     let conf_tree = proj.parse_conf();
-//     let mut build_path = proj.get_path().to_owned();
-//     build_path.push("build");
-//     if !build_path.is_dir() {
-//         fs::create_dir(&build_path).expect("failed to create build directory");
-//     }
+fn generate_executable(gcc: &PathBuf, path: &PathBuf, out: &PathBuf,sources:Vec<String>) {
+    
+    println!("Generating executable");
+    let _res = Command::new(gcc.to_owned())
+        .current_dir(path)
+        .arg("-Iheader")
+        .arg("-o")
+        .arg(out.to_str().unwrap())
+        .args(sources)
+        .status()
+        .expect("Failed to compile");
+}
 
-//     if args.release {
-//         let mut release_path = build_path.to_owned();
-//         release_path.push("release");
-//         if !release_path.is_dir() {
-//             fs::create_dir(&release_path).expect("failed to create debug directory");
-//         }
-//     } else {
-//         let mut debug_path = build_path.to_owned();
-//         debug_path.push("debug");
-//         if !debug_path.is_dir() {
-//             fs::create_dir(&debug_path).expect("failed to create debug directory");
-//         }
-//     }
+fn generate_library(gcc: &PathBuf, path: &PathBuf, out: &PathBuf, sources:Vec<String>) {
 
-//     let arg_platforms = args.platform.as_ref();
-//     let arg_archtectures = args.archtecture.as_ref();
+    println!("Generating lib");
+    let _res = Command::new(gcc.to_owned())
+        .current_dir(path)
+        .arg("-shared")
+        .arg("-Iheader")
+        .arg("-o")
+        .arg(out)
+        .args(sources)
+        .status()
+        .expect("Failed to compile");
+}
 
-//     let platforms = match arg_platforms {
-//         Some(val) => val.iter().map(|x| x.to_string()).collect::<Vec<String>>(),
-//         None => op.plats.clone(),
-//     };
-//     let archtectures = match arg_archtectures {
-//         Some(val) => val.iter().map(|x| x.to_string()).collect::<Vec<String>>(),
-//         None => op.arch.clone(),
-//     };
+fn compile_project(platform: &str,archtecture:&str,out_dir:&PathBuf,proj:&Project,verbose:bool){
+    let deps = proj.get_dependencie(vec![platform], vec![archtecture]);
+    let log = |txt: String| { if verbose { println!("{}", txt); }};
 
-//     let mut universal_deps = Vec::<Dependencie>::new();
-//     if let Some(all_plat) = conf_tree.get(&String::from("all")) {
-//         if let Some(all_deps) = all_plat.get(&String::from("all")) {
-//             universal_deps = all_deps.clone();
-//         }
-//     }
+    log(format!("Building {} for [{}][{}]\n",proj.name,platform, archtecture));
+    log("Looking for dependencies:".to_owned());
+    for dep in deps.iter() {
+        log(format!("Adding dependencie: {} {}", dep.name, dep.version));
+    }
 
-//     for plat_a in platforms {
-//         if let Some(plat) = conf_tree.get(&String::from(&plat_a)) {
-//             for arch_a in &archtectures {
-//                 if let Some(deps) = plat.get(&String::from(arch_a)) {
-//                     let mut deps_vec = Vec::<Dependencie>::new();
-//                     deps_vec.extend(universal_deps.clone());
-//                     if let Some(u_deps) = plat.get(&String::from("all")) {
-//                         deps_vec.extend(u_deps.clone());
-//                     }
-//                     if let Some(all_plat) = conf_tree.get(&String::from("all")) {
-//                         if let Some(all_deps) = all_plat.get(&String::from(arch_a)) {
-//                             deps_vec.extend(all_deps.clone());
-//                         }
-//                     }
-//                     deps_vec.extend(deps.clone());
+    match which::which("gcc"){
+        Ok(gcc)=>{
+            let sources = generate_objects(&gcc,&proj.get_path(),&out_dir);
+            let mut file_name = out_dir.to_owned();
+          
+            match proj.proj_type.as_str(){
+                "app"=>{
+                    match platform{
+                        "windows" => file_name.push(proj.name.clone()+".exe"),
+                        _=>file_name.push(proj.name.clone())
+                    };
+                    generate_executable(&gcc, &proj.get_path(), &file_name, sources);
+                },
+                "lib"=>{
+                    match platform{
+                        "windows" => file_name.push(proj.name.clone()+".dll"),
+                        _=>file_name.push(proj.name.clone()+".so")
+                    };
+                    generate_library(&gcc,&proj.get_path(),&file_name,sources);
+                },
+                _=>{}
+            }
+        },
+        Err(e)=>println!("GCC not found!\n{:?}",e)
+    };
 
-//                     cmd_compile_project(
-//                         &plat_a,
-//                         arch_a,
-//                         &proj.get_path(),
-//                         args.release,
-//                         &deps_vec,
-//                         &proj,
-//                         args.verbose,
-//                     );
-//                 }
-//             }
-//         }
-//     }
-// }
+}
 
-// pub fn cmd_build_lib(op: &BuilderOp, args: BuildArgs) {}

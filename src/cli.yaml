@@ -22,6 +22,12 @@ subcommands:
             required: false
             help: Define if project metadata should use default configurations
             takes_value: false
+        - type:
+            long: type
+            short: t
+            required: false
+            help: Define the projects type
+            takes_value: true
   - open:
       about: Open a project in the text editor
       args:
@@ -41,12 +47,6 @@ subcommands:
         - name:
             required: true
             help: The project´s name
-            takes_value: true
-        - level:
-            long: level
-            short: l
-            required: false
-            help: Level of detail
             takes_value: true
         - version:
             long: version
@@ -83,9 +83,14 @@ subcommands:
       about: Creates a new version of an project
       args:
         - name:
-            long: name
             required: true
             help: The project´s name
+            takes_value: true
+        - type:
+            long: type
+            short: t
+            required: true
+            help: Type of update (major, minor, patch)
             takes_value: true
         - from:
             long: from
@@ -95,7 +100,6 @@ subcommands:
             takes_value: true
         - to:
             long: to
-            short: t
             required: false
             help: Label of new version
             takes_value: true
@@ -166,6 +170,9 @@ subcommands:
             help: Filter Library(lib) or Project(project) or both(all)
             required: false
             takes_value: true
-
+  - root:
+        long: root
+        about: open builder directory
+        takes_value: false
 
 
