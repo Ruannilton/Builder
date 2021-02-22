@@ -65,7 +65,7 @@ subcommands:
             long: recursive
             short: r
             required: false
-            help: Remove it's dependencies that havent others dependants too
+            help: Remove it's dependencies that havent others dependants too, default value is true
             takes_value: false
         - version:
             long: version

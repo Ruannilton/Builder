@@ -223,7 +223,16 @@ impl Project {
         }
         vec
     }
-
+    pub fn get_all_dependencies(&self) -> Vec<Dependencie>{
+        let mut deps = Vec::<Dependencie>::new();
+        let cfg = self.parse_conf();
+        for v in cfg.values(){
+            for b in v.values(){
+                deps.extend(b.clone());
+            }
+        }
+        deps
+    }
     pub fn list() -> Vec<Project> {
         let proj_path = Project::get_project_root();
         let mut vec: Vec<Project> = Vec::new();

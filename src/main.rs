@@ -166,13 +166,21 @@ fn show(matches: &ArgMatches) {
 
 }
 
-fn rm(_matches: &ArgMatches) {
-   
+fn rm(matches: &ArgMatches) {
+   if let Some(rm) = matches.subcommand_matches("rm"){
+       let args = RmArgs{
+        name: rm.value_of("name").unwrap(),
+        recursive: rm.is_present("force"),
+        version: rm.value_of("version"),
+        force: rm.is_present("force"),
+       };
+       commands::cmd_rm_project(args);
+   }
 }
 
 fn nv(matches: &ArgMatches) {
     if let Some(nv) = matches.subcommand_matches("nv"){
-        let mut args = NvArgs{
+        let args = NvArgs{
             name: nv.value_of("name").unwrap(),
             u_type: nv.value_of("type").unwrap(),
             from: nv.value_of("from"),

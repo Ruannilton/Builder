@@ -390,6 +390,13 @@ pub fn cmd_nv_project(arg: NvArgs){
     }
 }
 
+pub fn cmd_rm_project(arg: RmArgs){
+    if let Some(proj) = Project::load(&arg.name.to_owned(), arg.version){
+        let mut dependencies = proj.get_all_dependencies();
+        println!("{:?}",dependencies);
+    }
+}
+
 fn generate_objects(gcc: &PathBuf, path: &PathBuf, output: &PathBuf) -> Vec<String> {
     let sources = utils::find_files(path.to_owned(), "/*.c");
     let mut obj_dirs = Vec::new();
