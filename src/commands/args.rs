@@ -27,12 +27,12 @@ pub struct ShowArgs<'a> {
     pub version: Option<&'a str>,
 }
 
-// pub struct RmArgs<'a> {
-//     pub name: &'a str,
-//     pub recursive: bool,
-//     pub version: Option<&'a str>,
-//     pub force: bool,
-// }
+pub struct RmArgs<'a> {
+    pub name: &'a str,
+    pub recursive: bool,
+    pub version: Option<&'a str>,
+    pub force: bool,
+}
 
 #[derive(Debug,Clone)]
 pub struct NvArgs<'a> {

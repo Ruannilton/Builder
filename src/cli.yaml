@@ -65,13 +65,13 @@ subcommands:
             long: recursive
             short: r
             required: false
-            help: Remove it's dependencies too
+            help: Remove it's dependencies that havent others dependants too
             takes_value: false
         - version:
             long: version
             short: v
             required: false
-            help: The project version, if not especified all versions will be shaw
+            help: The project version, or "all" to delete all versions, if only exist one version ignore this argument
             takes_value: true
         - force:
             long: force
@@ -160,9 +160,9 @@ subcommands:
             help: Show project versions
             required: false
         - show_dependencies:
-            long: dependendices
+            long: dependencies
             short: d
-            help: Show project dependenciesa
+            help: Show project dependencies
             required: false
         - type:
             long: type

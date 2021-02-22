@@ -350,21 +350,34 @@ pub fn cmd_nv_project(arg: NvArgs){
                     println!("Should especify if the update is major, minor or patch");
                 }
             }
-            let to = format!("{}.{}.{}",to.major,to.minor,to.patch);
-            let new_path = Project::make_path(&arg.name.to_owned(), Some(to.as_str()));
+            let to_str = format!("{}.{}.{}",to.major,to.minor,to.patch);
+            let new_path = Project::make_path(&arg.name.to_owned(), Some(to_str.clone().as_str()));
             
             match fs::create_dir(&new_path){
                Ok(_)=>{
-                let mut cp_dir = proj.get_path();
+                let cp_dir = proj.get_path();
                 let mut cp_op = CopyOptions::new();
                 cp_op.content_only = true;
                  match fs_extra::dir::copy(cp_dir, new_path, &cp_op){
                    Ok(_)=>{
-                    let mut proj = Project::load(&arg.name.to_owned(), Some(to.as_str()));
+                    let proj = Project::load(&arg.name.to_owned(), Some(to_str.clone().as_str()));
                     if let Some(mut p)= proj{
-                        p.version = to;
+                        p.version = to_str.clone();
                         p.save();
                     }
+                    if let Some(mut log) = ProjectLog::load(arg.name.to_owned()){
+                        if let Ok (log_ver) = semver::Version::parse(log.last_version.as_str()){
+                            if log_ver < to {
+                                log.last_version = to_str;
+                                log.save();
+                            }
+                        }else{
+                            println!("Failed to update project log: can't parse version from file");
+                        }
+                    }else{
+                        println!("Failed to update project log: can't load file");
+                    }
+                    
                    },
                    Err(_)=>{println!("Failed to create new project content")}
                }},

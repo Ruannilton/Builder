@@ -1,4 +1,6 @@
 # Builder
+### *PROJECT UNDER DEVELOPMENT*
+<br>
 
 A tool for package managing and building in C projects
 
@@ -15,30 +17,45 @@ proj_name
 - proj.toml
 - header
   - proj_name.h
-  - internal
+  - *.h
 - source
+  - *.c
 - build
   - release
   - debug
 - assets
   
 **Builder Env:**
-- configs.json
-- lib_table.json
-- project_table.json
-- 
-- builder
-  - libs
-    - lib_name
-      - lib_version
-          <br>...files
+- config.json
+- libs
+  - lib_name
+    - lib_name_1.0.0 
+    - lib_name_1.0.1
   - projects
     - project_name
-      - projec_version
-          <br>... files
+      - project_name_2.0.1
+      - project_name_3.0.5
+      - ...
+      - log.json
 
-**Notas:**
-- As configurações de plataforma são acumulativas, assim:
+**Proj.toml:**
+<br>The project config file is in toml format
+
+```
+name = 'my_app'
+version = '1.0.0'
+authors = ['Ruan Azevedo']
+proj_type = 'app'
+desc = 'An example of how to make builder config files'
+
+[[platform]]
+name = 'all'
+arch = ["x86","x64"]
+```
+The file above means an project designed to be an executable.<br>
+On platform section we especified that this project can be built for any platform (like windows, mac, linux , etc...) with x86 or x64 archtecture.<br>
+
+The platform configurations are cumulative:
   ```
   [[platform]]
   name="all"
@@ -59,9 +76,9 @@ proj_name
   [platform.dependencies]
   directx = "1.0"
   ```
-  Para plataforma linux x64 as dependências serão: glfw,cglm,vulkan<br>
-  Para plataforma windows: glfw,cglm,directx<br>
-  Caso haja conflito entre versões das bibliotecas, a última especificada será levada em conta
+  For linux x64 platform the dependencies will be: glfw, cglm, vulkan<br>
+  For windows platform: glfw, cglm, directx<br>
+  In case of conflict between versions of the libraries, the last one specified will be taken
   
 # Commands
 
@@ -71,7 +88,8 @@ proj_name
   **Paramters:**
   - *name*: The name of the project
   - *c*, *conf*: Define if project metadata should use default configurations 
-
+  - *t*, *type*: Define the projects type
+  
   ## open
   **Description:** Open a project in the text editor
 
@@ -79,6 +97,13 @@ proj_name
   - *name*: The project name
   - *v*, *version*: The project version, if not especified the last version will be open
 
+  ## show
+  **Description:** Show the details of an project
+
+  **Parameters:**
+  - *name*: The project´s name
+  - *v*, *version*: The project version, if not especified all versions will be shaw
+  
   ## build
   **Description:** Builds the project
 
@@ -86,14 +111,6 @@ proj_name
   - *name*: The project name
   - *p*, *platform*: Platform version
   - *a*, *arch*: Archtecture
-
-  ## show
-  **Description:** Show the details of an project
-
-  **Paramters:**
-  - *name*: The project name
-  - *l*, *level*: Complete detailing
-  - *v*, *version*: The project version, if not especified all versions will be shaw
 
   ## rm 
   **Description:** Delete a project
@@ -109,17 +126,23 @@ proj_name
 
   **Paramters:**
   - *name*: The name of the project
+  - *t*, *type*: Type of update (major, minor, patch)
   - *f*, *from*: Version from update
-  - *t*, *to*: Label of new version
+  - *to*: Label of new version
 
   ## list
-  **Description:** Show all projects
+  **Description:** Show projects and libraries
 
-  ## update
+  **Paramters:**
+  - *v*, *versions*: Show project versions
+  - *d*, *dependencies*: Show project dependencies
+  - *t*, *type*: Filter Library(lib) or Project(project) or both(all)
+
+  <!-- ## update
   **Description:** Install a new version of an project
 
   **Paramters:**
-  - *name*: The name of the project 
+  - *name*: The name of the project  -->
   
 
 
